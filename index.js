@@ -12,6 +12,24 @@ app.use(cors());
 app.use(express.json());
 
 
+const verifyJwt = (req, res, next) => {
+    const authorization = req.headers.authorization;
+    if(!authorization){
+        return res.status(401).send({error: true, message:"Unauthorized Access from"});
+    }
+    // bearer token
+    const token = authorization.split(' ')[1];
+
+    jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded)=>{
+        if(err){
+            return res.status(401).send({error: true, message:"Unauthorized Access"});
+        }
+        req.decoded = decoded;
+        next();
+    })
+}
+
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.v9m7cjb.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -59,10 +77,10 @@ async function run() {
 
         app.post("/users", async (req, res) => {
             const user = req.body;
-            console.log(user);
+            // console.log(user);
             const query = { email: user.email }
             const existingUser = await usersCollection.findOne(query);
-            console.log("existing user", existingUser);
+            // console.log("existing user", existingUser);
             if (existingUser) {
                 return res.send({ message: 'User already exists' })
             }
@@ -106,8 +124,15 @@ async function run() {
         });
 
         // get all cart items form cart collection
-        app.get("/carts", async (req, res) => {
+        app.get("/carts", verifyJwt, async (req, res) => {
             const email = req.query.email;
+            if(!email) {
+                res.send([]);
+            }
+            const decodedEmail = req.decoded.email;
+            if(email !== decodedEmail) {
+                return res.status(401).send({error: true, message:"Forbidden Access"});
+            }
             const query = { email: email };
             const result = await cartCollection.find(query).toArray();
             res.send(result);
