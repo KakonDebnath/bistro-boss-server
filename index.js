@@ -15,7 +15,7 @@ app.use(express.json());
 const verifyJwt = (req, res, next) => {
     const authorization = req.headers.authorization;
     if(!authorization){
-        return res.status(401).send({error: true, message:"Unauthorized Access from"});
+        return res.status(401).send({error: true, message:"Unauthorized Access"});
     }
     // bearer token
     const token = authorization.split(' ')[1];
@@ -58,7 +58,7 @@ async function run() {
 
         // jwt node bellow code for generate secret key
         // require("crypto").randomBytes(64).toString("hex")
-        // 'eb6c0546ff5cd88909b71f01eb729e951d86bfa604ddc0263b239ad20c195f1efdbaf721818d6abc2916b460eaecb8ddb18d0b252a68df326f85c105e8beee39'
+        // ACCESS_TOKEN=eb6c0546ff5cd88909b71f01eb729e951d86bfa604ddc0263b239ad20c195f1efdbaf721818d6abc2916b460eaecb8ddb18d0b252a68df326f85c105e8beee39
         app.post("/jwt", (req, res) => {
             const user = req.body;
             const token = jwt.sign(user, process.env.ACCESS_TOKEN, 
@@ -88,7 +88,18 @@ async function run() {
             res.send(result);
         })
 
-        app.patch("/admin/users/:id", async (req, res) => {
+        // app.get("users/admin/:email", verifyJwt, async (req, res) => {
+        //     const email = req.params.email;
+        //     if(req.decoded.email !== email) {
+        //         res.send({admin : false})
+        //     }
+        //     const query = {email: email};
+        //     const user = await usersCollection.findOne(query);
+        //     const result = {admin: user?.role === 'admin'};
+        //     res.send(result);
+        // })
+
+        app.patch("/users/admin/:id", async (req, res) => {
             const id = req.params.id;
             // console.log(id);
             const filter = { _id: new ObjectId(id) };
@@ -102,7 +113,7 @@ async function run() {
             res.send(result);
         })
 
-        app.delete("/admin/users/:id", async (req, res) => {
+        app.delete("/users/admin/:id", async (req, res) => {
             const id = req.params.id;
             // console.log(id);
             const query = { _id: new ObjectId(id) };
