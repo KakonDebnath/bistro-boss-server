@@ -5,6 +5,7 @@ require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000;
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 
 // middleware
@@ -14,15 +15,15 @@ app.use(express.json());
 
 const verifyJwt = (req, res, next) => {
     const authorization = req.headers.authorization;
-    if(!authorization){
-        return res.status(401).send({error: true, message:"Unauthorized Access"});
+    if (!authorization) {
+        return res.status(401).send({ error: true, message: "Unauthorized Access" });
     }
     // bearer token
     const token = authorization.split(' ')[1];
 
-    jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded)=>{
-        if(err){
-            return res.status(401).send({error: true, message:"Unauthorized Access"});
+    jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ error: true, message: "Unauthorized Access" });
         }
         req.decoded = decoded;
         next();
@@ -61,18 +62,18 @@ async function run() {
         // ACCESS_TOKEN=eb6c0546ff5cd88909b71f01eb729e951d86bfa604ddc0263b239ad20c195f1efdbaf721818d6abc2916b460eaecb8ddb18d0b252a68df326f85c105e8beee39
         app.post("/jwt", (req, res) => {
             const user = req.body;
-            const token = jwt.sign(user, process.env.ACCESS_TOKEN, 
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN,
                 { expiresIn: '1h' });
-                res.send({token});
+            res.send({ token });
         })
 
         // Verify Admin
         const verifyAdmin = async (req, res, next) => {
             const email = req.decoded.email;
-            const query = {email: email};
+            const query = { email: email };
             const user = await usersCollection.findOne(query);
-            if(user?.role !== 'admin'){
-                return res.status(403).send({error: true, message: "Forbidden User"})
+            if (user?.role !== 'admin') {
+                return res.status(403).send({ error: true, message: "Forbidden User" })
             }
             next();
         }
@@ -99,13 +100,13 @@ async function run() {
 
         app.get("/users/admin/:email", verifyJwt, async (req, res) => {
             const email = req.params.email;
-            if(req.decoded.email !== email) {
-                res.send({admin : false})
+            if (req.decoded.email !== email) {
+                res.send({ admin: false })
             }
             // console.log(email);
-            const query = {email: email};
+            const query = { email: email };
             const user = await usersCollection.findOne(query);
-            const result = {admin: user?.role === 'admin'};
+            const result = { admin: user?.role === 'admin' };
             res.send(result);
         })
 
@@ -141,7 +142,7 @@ async function run() {
         // Delete Menu Item
         app.delete("/menu/:id", verifyJwt, verifyAdmin, async (req, res) => {
             const id = req.params.id;
-            const query = {_id: new ObjectId(id)}
+            const query = { _id: new ObjectId(id) }
             const result = await menuCollection.deleteOne(query)
             res.send(result);
         })
@@ -149,9 +150,9 @@ async function run() {
         // get post menu items
 
         app.post("/addMenu", verifyJwt, verifyAdmin, async (req, res) => {
-           const menuItem = req.body;
-           const result = await menuCollection.insertOne(menuItem);
-           res.send(result);
+            const menuItem = req.body;
+            const result = await menuCollection.insertOne(menuItem);
+            res.send(result);
         })
 
         // get all review items
@@ -163,12 +164,12 @@ async function run() {
         // get all cart items form cart collection
         app.get("/carts", verifyJwt, async (req, res) => {
             const email = req.query.email;
-            if(!email) {
+            if (!email) {
                 res.send([]);
             }
             const decodedEmail = req.decoded.email;
-            if(email !== decodedEmail) {
-                return res.status(401).send({error: true, message:"Forbidden Access"});
+            if (email !== decodedEmail) {
+                return res.status(401).send({ error: true, message: "Forbidden Access" });
             }
             const query = { email: email };
             const result = await cartCollection.find(query).toArray();
@@ -191,7 +192,21 @@ async function run() {
             // console.log(id);
 
         });
-
+        // Create Payment Intent
+        // app.post("/create-payment-intent", async (req, res) => {
+        //     const {price} = req.body;
+        //     const amount = price * 100;
+        //     const paymentIntent = await stripe.paymentIntents.create({
+        //         currency: "usd",
+        //         amount: amount,
+        //         "payment_method_types": [
+        //             "card"
+        //           ],
+        //     })
+        //     res.send({
+        //         clientSecret: paymentIntent.client_secret,
+        //       });
+        // });
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
